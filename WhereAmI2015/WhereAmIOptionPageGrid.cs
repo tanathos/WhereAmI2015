@@ -120,6 +120,11 @@ namespace WhereAmI2015
 
         protected override void OnApply(PageApplyEventArgs e)
         {
+            if (e.ApplyBehavior == ApplyKind.Apply)
+            {
+                
+            }
+
             base.OnApply(e);
         }
     }
