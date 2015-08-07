@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,17 +15,17 @@ namespace WhereAmI2015
         /// <summary>
         /// The color of the current filename (hexadecimal)
         /// </summary>
-        string FilenameColor { get; set; }
+        Color FilenameColor { get; set; }
 
         /// <summary>
         /// The color of the folders string (hexadecimal)
         /// </summary>
-        string FoldersColor { get; set; }
+        Color FoldersColor { get; set; }
 
         /// <summary>
         /// The color of the project name (hexadecimal)
         /// </summary>
-        string ProjectColor { get; set; }
+        Color ProjectColor { get; set; }
 
         /// <summary>
         /// Indicates if the filename has to be visible

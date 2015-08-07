@@ -1,4 +1,6 @@
 ﻿WhereAmI - Changelog
 --------------------
 
+0.5.0 - Added the backbones for the settings
+
 0.0.0 - Started the project

@@ -6,11 +6,27 @@ using System.Threading.Tasks;
 using System.ComponentModel;
 using Microsoft.VisualStudio.Shell;
 using System.Drawing;
+using Microsoft.VisualStudio.ComponentModelHost;
 
 namespace WhereAmI2015
 {
     public class WhereAmIOptionPageGrid : DialogPage
     {
+        IWhereAmISettings settings
+        {
+            get
+            {
+                var componentModel = (IComponentModel)(Site.GetService(typeof(SComponentModel)));
+                IWhereAmISettings s = componentModel.DefaultExportProvider.GetExportedValue<IWhereAmISettings>();
+
+                return s;
+            }
+        }
+
+        #region -- Interface fields --
+
+        #endregion
+
         private Color _FilenameColor = Color.FromArgb(234, 234, 234);
         private Color _FoldersColor = Color.FromArgb(243, 243, 243);
         private Color _ProjectColor = Color.FromArgb(243, 243, 243);
@@ -111,18 +127,47 @@ namespace WhereAmI2015
             set { _ProjectSize = value; }
         }
 
+        private void BindSettings()
+        {
+            _FilenameColor = settings.FilenameColor;
+            _FoldersColor = settings.FoldersColor;
+            _ProjectColor = settings.ProjectColor;
 
+            _FilenameSize = settings.FilenameSize;
+            _FoldersSize = settings.FoldersSize;
+            _ProjectSize = settings.ProjectSize;
+
+            _ViewFilename = settings.ViewFilename;
+            _ViewFolders = settings.ViewFolders;
+            _ViewProject = settings.ViewProject;
+        }
 
         protected override void OnActivate(CancelEventArgs e)
         {
             base.OnActivate(e);
+
+            BindSettings();
         }
 
         protected override void OnApply(PageApplyEventArgs e)
         {
             if (e.ApplyBehavior == ApplyKind.Apply)
             {
+                settings.FilenameColor = FilenameColor;
+                settings.FoldersColor = FoldersColor;
+                settings.ProjectColor = ProjectColor;
+
+                settings.FilenameSize = FilenameSize;
+                settings.FoldersSize = FoldersSize;
+                settings.ProjectSize = ProjectSize;
+
+                settings.ViewFilename = ViewFilename;
+                settings.ViewFolders = ViewFolders;
+                settings.ViewProject = ViewProject;
                 
+                // TODO: unlock the store
+                //
+                //settings.Store();
             }
 
             base.OnApply(e);

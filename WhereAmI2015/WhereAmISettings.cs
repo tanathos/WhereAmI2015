@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,7 +20,7 @@ namespace WhereAmI2015
         /// </summary>
         readonly WritableSettingsStore writableSettingsStore;
 
-        const string CollectionPath = "WhereAmI";
+        const string CollectionPath = "WhereAmI2015";
 
         public WhereAmISettings()
         {
@@ -35,14 +36,14 @@ namespace WhereAmI2015
             LoadSettings();
         }
 
-        public string FilenameColor { get { return _FilenameColor; } set { _FilenameColor = value; } }
-        private string _FilenameColor;
+        public Color FilenameColor { get { return _FilenameColor; } set { _FilenameColor = value; } }
+        private Color _FilenameColor;
 
-        public string FoldersColor { get { return _FoldersColor; } set { _FoldersColor = value; } }
-        private string _FoldersColor;
+        public Color FoldersColor { get { return _FoldersColor; } set { _FoldersColor = value; } }
+        private Color _FoldersColor;
 
-        public string ProjectColor { get { return _ProjectColor; } set { _ProjectColor = value; } }
-        private string _ProjectColor;
+        public Color ProjectColor { get { return _ProjectColor; } set { _ProjectColor = value; } }
+        private Color _ProjectColor;
 
         public bool ViewFilename { get { return _ViewFilename; } set { _ViewFilename = value; } }
         private bool _ViewFilename = true;
@@ -71,9 +72,9 @@ namespace WhereAmI2015
                     writableSettingsStore.CreateCollection(CollectionPath);
                 }
 
-                writableSettingsStore.SetString(CollectionPath, "FilenameColor", this.FilenameColor);
-                writableSettingsStore.SetString(CollectionPath, "FoldersColor", this.FoldersColor);
-                writableSettingsStore.SetString(CollectionPath, "ProjectColor", this.ProjectColor);
+                writableSettingsStore.SetInt32(CollectionPath, "FilenameColor", this.FilenameColor.ToArgb());
+                writableSettingsStore.SetInt32(CollectionPath, "FoldersColor", this.FoldersColor.ToArgb());
+                writableSettingsStore.SetInt32(CollectionPath, "ProjectColor", this.ProjectColor.ToArgb());
 
                 writableSettingsStore.SetString(CollectionPath, "ViewFilename", this.ViewFilename.ToString());
                 writableSettingsStore.SetString(CollectionPath, "ViewFolders", this.ViewFolders.ToString());
@@ -101,15 +102,17 @@ namespace WhereAmI2015
             _FilenameSize = 60;
             _FoldersSize = _ProjectSize = 52;
 
-            _FilenameColor = "#eaeaea";
-            _FoldersColor = _ProjectColor = "#f3f3f3";
+            _FilenameColor = Color.FromArgb(234, 234, 234);
+            _FoldersColor = _ProjectColor = Color.FromArgb(243, 243, 243);
 
             try
             {
-                // Retrieve the Id of the current theme used in VS from user's settings
-                string visualStudioThemeId = writableSettingsStore.GetString("General", "CurrentTheme");
+                // Retrieve the Id of the current theme used in VS from user's settings, this is changed a lot in VS2015
+                string visualStudioThemeId = VSRegistry.RegistryRoot(Microsoft.VisualStudio.Shell.Interop.__VsLocalRegistryType.RegType_UserSettings).OpenSubKey("ApplicationPrivateSettings").OpenSubKey("Microsoft").OpenSubKey("VisualStudio").GetValue("ColorTheme", "de3dbbcd-f642-433c-8353-8f1df4370aba", Microsoft.Win32.RegistryValueOptions.DoNotExpandEnvironmentNames).ToString();
 
-                switch (visualStudioThemeId)
+                string parsedThemeId = Guid.Parse(visualStudioThemeId.Split('*')[2]).ToString();
+
+                switch (parsedThemeId)
                 {
                     case "de3dbbcd-f642-433c-8353-8f1df4370aba": // Light
                     case "a4d6a176-b948-4b29-8c66-53c97a1ed7d0": // Blue
@@ -118,25 +121,25 @@ namespace WhereAmI2015
                         break;
 
                     case "1ded0138-47ce-435e-84ef-9ec1f439b749": // Dark
-                        _FilenameColor = "#303030";
-                        _FoldersColor = _ProjectColor = "#282828";
+                        _FilenameColor = Color.FromArgb(48, 48, 48);
+                        _FoldersColor = _ProjectColor = Color.FromArgb(40, 40, 40);
                         break;
                 }
 
                 // Tries to retrieve the configurations if previously saved
                 if (writableSettingsStore.PropertyExists(CollectionPath, "FilenameColor"))
                 {
-                    this.FilenameColor = writableSettingsStore.GetString(CollectionPath, "FilenameColor", this.FilenameColor);
+                    this.FilenameColor = Color.FromArgb(writableSettingsStore.GetInt32(CollectionPath, "FilenameColor", this.FilenameColor.ToArgb()));
                 }
 
                 if (writableSettingsStore.PropertyExists(CollectionPath, "FoldersColor"))
                 {
-                    this.FoldersColor = writableSettingsStore.GetString(CollectionPath, "FoldersColor", this.FoldersColor);
+                    this.FoldersColor = Color.FromArgb(writableSettingsStore.GetInt32(CollectionPath, "FoldersColor", this.FoldersColor.ToArgb()));
                 }
 
                 if (writableSettingsStore.PropertyExists(CollectionPath, "ProjectColor"))
                 {
-                    this.ProjectColor = writableSettingsStore.GetString(CollectionPath, "ProjectColor", this.ProjectColor);
+                    this.ProjectColor = Color.FromArgb(writableSettingsStore.GetInt32(CollectionPath, "ProjectColor", this.ProjectColor.ToArgb()));
                 }
 
                 if (writableSettingsStore.PropertyExists(CollectionPath, "ViewFilename"))
