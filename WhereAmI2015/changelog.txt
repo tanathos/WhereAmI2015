@@ -1,0 +1,4 @@
+﻿WhereAmI - Changelog
+--------------------
+
+0.0.0 - Started the project
