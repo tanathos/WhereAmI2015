@@ -27,9 +27,12 @@ namespace WhereAmI2015
         /// after the selection layer in the Z-order
         /// </summary>
         [Export(typeof(AdornmentLayerDefinition))]
-        [Name("WhereAmI")]
-        [Order(After = PredefinedAdornmentLayers.Caret)]
+        [Name("WhereAmIAdornment")]
+        [Order(Before = PredefinedAdornmentLayers.Text)]
         private AdornmentLayerDefinition editorAdornmentLayer;
+
+        [Import]
+        internal IWhereAmISettings Settings { get; set; }
 
 #pragma warning restore 649, 169
 
@@ -40,7 +43,7 @@ namespace WhereAmI2015
         public void TextViewCreated(IWpfTextView textView)
         {
             // The adorment will get wired to the text view events
-            new WhereAmI(textView);
+            new WhereAmI(textView, Settings);
         }
     }
 }

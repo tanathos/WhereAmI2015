@@ -9,6 +9,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Recoding.WhereAmI2015;
 
 namespace WhereAmI2015
 {
@@ -63,6 +64,13 @@ namespace WhereAmI2015
         public double ProjectSize { get { return _ProjectSize; } set { _ProjectSize = value; } }
         private double _ProjectSize;
 
+        public AdornmentPositions Position { get { return _Position; } set { _Position = value; } }
+        private AdornmentPositions _Position;
+
+        public double Opacity { get { return _Opacity; } set { _Opacity = value; } }
+        private double _Opacity;
+        
+
         public void Store()
         {
             try
@@ -83,6 +91,9 @@ namespace WhereAmI2015
                 writableSettingsStore.SetString(CollectionPath, "FilenameSize", this.FilenameSize.ToString());
                 writableSettingsStore.SetString(CollectionPath, "FoldersSize", this.FoldersSize.ToString());
                 writableSettingsStore.SetString(CollectionPath, "ProjectSize", this.ProjectSize.ToString());
+
+                writableSettingsStore.SetString(CollectionPath, "Position", this.Position.ToString());
+                writableSettingsStore.SetString(CollectionPath, "Opacity", this.Opacity.ToString());
             }
             catch (Exception ex)
             {
@@ -104,6 +115,10 @@ namespace WhereAmI2015
 
             _FilenameColor = Color.FromArgb(234, 234, 234);
             _FoldersColor = _ProjectColor = Color.FromArgb(243, 243, 243);
+
+            _Position = AdornmentPositions.TopRight;
+
+            _Opacity = 1;
 
             try
             {
@@ -182,6 +197,20 @@ namespace WhereAmI2015
                     double d = this.ProjectSize;
                     if (Double.TryParse(writableSettingsStore.GetString(CollectionPath, "ProjectSize"), out d))
                         this.ProjectSize = d;
+                }
+
+                if (writableSettingsStore.PropertyExists(CollectionPath, "Position"))
+                {
+                    AdornmentPositions p = this.Position;
+                    if (Enum.TryParse<AdornmentPositions>(writableSettingsStore.GetString(CollectionPath, "Position"), out p))
+                        this.Position = p;
+                }
+
+                if (writableSettingsStore.PropertyExists(CollectionPath, "Opacity"))
+                {
+                    double d = this.Opacity;
+                    if (Double.TryParse(writableSettingsStore.GetString(CollectionPath, "Opacity"), out d))
+                        this.Opacity = d;
                 }
             }
             catch (Exception ex)

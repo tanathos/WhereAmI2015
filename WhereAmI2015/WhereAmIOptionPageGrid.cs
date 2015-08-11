@@ -7,6 +7,8 @@ using System.ComponentModel;
 using Microsoft.VisualStudio.Shell;
 using System.Drawing;
 using Microsoft.VisualStudio.ComponentModelHost;
+using Recoding.WhereAmI2015;
+using Recoding.WhereAmI2015.SettingsConverters;
 
 namespace WhereAmI2015
 {
@@ -38,6 +40,9 @@ namespace WhereAmI2015
         private double _FilenameSize = 60;
         private double _FoldersSize = 52;
         private double _ProjectSize = 52;
+
+        private AdornmentPositions _Position = AdornmentPositions.TopRight;
+        private double _Opacity = 1;
 
         [Category("Filename")]
         [DisplayName("Show")]
@@ -97,8 +102,6 @@ namespace WhereAmI2015
             set { _FoldersSize = value; }
         }
 
-
-
         [Category("Project")]
         [DisplayName("Show")]
         [Description("The enable or disable the project name")]
@@ -127,6 +130,26 @@ namespace WhereAmI2015
             set { _ProjectSize = value; }
         }
 
+        [Category("Appearance")]
+        [DisplayName("Position")]
+        [Description("The position in the view of the text block")]
+        [Browsable(true)]
+        public AdornmentPositions Position
+        {
+            get { return _Position; }
+            set { _Position = value; }
+        }
+
+        [Category("Appearance")]
+        [DisplayName("Opacity")]
+        [Description("Opacity of the text. Insert a value between 0 and 1.")]
+        [TypeConverter(typeof(PercentageConverter))]
+        public double Opacity
+        {
+            get { return _Opacity; }
+            set { _Opacity = value; }
+        }
+
         private void BindSettings()
         {
             _FilenameColor = settings.FilenameColor;
@@ -140,6 +163,9 @@ namespace WhereAmI2015
             _ViewFilename = settings.ViewFilename;
             _ViewFolders = settings.ViewFolders;
             _ViewProject = settings.ViewProject;
+
+            _Position = settings.Position;
+            _Opacity = settings.Opacity;
         }
 
         protected override void OnActivate(CancelEventArgs e)
@@ -164,10 +190,11 @@ namespace WhereAmI2015
                 settings.ViewFilename = ViewFilename;
                 settings.ViewFolders = ViewFolders;
                 settings.ViewProject = ViewProject;
-                
-                // TODO: unlock the store
-                //
-                //settings.Store();
+
+                settings.Position = Position;
+                settings.Opacity = Opacity;
+
+                settings.Store();
             }
 
             base.OnApply(e);

@@ -8,6 +8,10 @@ using System;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
+using EnvDTE;
+using Microsoft.VisualStudio.Text;
 
 namespace WhereAmI2015
 {
@@ -16,40 +20,17 @@ namespace WhereAmI2015
     /// </summary>
     internal sealed class WhereAmI
     {
-        /// <summary>
-        /// The width of the square box.
-        /// </summary>
-        private const double AdornmentWidth = 30;
+        private TextBlock _fileName;
+        private TextBlock _folderStructure;
+        private TextBlock _projectName;
+
+        private IWpfTextView _view;
+        private IAdornmentLayer _adornmentLayer;
 
         /// <summary>
-        /// The height of the square box.
+        /// Settings of the extension, injected by the provider
         /// </summary>
-        private const double AdornmentHeight = 30;
-
-        /// <summary>
-        /// Distance from the viewport top to the top of the square box.
-        /// </summary>
-        private const double TopMargin = 30;
-
-        /// <summary>
-        /// Distance from the viewport right to the right end of the square box.
-        /// </summary>
-        private const double RightMargin = 30;
-
-        /// <summary>
-        /// Text view to add the adornment on.
-        /// </summary>
-        private readonly IWpfTextView view;
-
-        /// <summary>
-        /// Adornment image
-        /// </summary>
-        private readonly Image image;
-
-        /// <summary>
-        /// The layer for the adornment.
-        /// </summary>
-        private readonly IAdornmentLayer adornmentLayer;
+        readonly IWhereAmISettings _settings;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="WhereAmI"/> class.
@@ -57,59 +38,189 @@ namespace WhereAmI2015
         /// adds the the square in the upper right-hand corner of the TextView via the adornment layer
         /// </summary>
         /// <param name="view">The <see cref="IWpfTextView"/> upon which the adornment will be drawn</param>
-        public WhereAmI(IWpfTextView view)
+        /// <param name="settings">The <see cref="IWhereAmISettings"/> injected by the provider</param>
+        public WhereAmI(IWpfTextView view, IWhereAmISettings settings)
         {
-            if (view == null)
+            _view = view;
+            _settings = settings;
+
+            _fileName = new TextBlock();
+            _folderStructure = new TextBlock();
+            _projectName = new TextBlock();
+
+            ITextDocument textDoc;
+            object obj;
+            if (view.TextBuffer.Properties.TryGetProperty<ITextDocument>(typeof(ITextDocument), out textDoc))
             {
-                throw new ArgumentNullException("view");
+                // Retrieved the ITextDocument from the first level
+            }
+            else if (view.TextBuffer.Properties.TryGetProperty<object>("IdentityMapping", out obj))
+            {
+                // Try to get the ITextDocument from the second level (e.g. Razor files)
+                if ((obj as ITextBuffer) != null)
+                {
+                    (obj as ITextBuffer).Properties.TryGetProperty<ITextDocument>(typeof(ITextDocument), out textDoc);
+                }
             }
 
-            this.view = view;
-
-            var brush = new SolidColorBrush(Colors.BlueViolet);
-            brush.Freeze();
-            var penBrush = new SolidColorBrush(Colors.Red);
-            penBrush.Freeze();
-            var pen = new Pen(penBrush, 0.5);
-            pen.Freeze();
-
-            // Draw a square with the created brush and pen
-            System.Windows.Rect r = new System.Windows.Rect(0, 0, AdornmentWidth, AdornmentHeight);
-            var geometry = new RectangleGeometry(r);
-
-            var drawing = new GeometryDrawing(brush, pen, geometry);
-            drawing.Freeze();
-
-            var drawingImage = new DrawingImage(drawing);
-            drawingImage.Freeze();
-
-            this.image = new Image
+            // If I found an ITextDocument, access to its FilePath prop to retrieve informations about Proj
+            if (textDoc != null)
             {
-                Source = drawingImage,
-            };
+                string fileName = System.IO.Path.GetFileName(textDoc.FilePath);
 
-            this.adornmentLayer = view.GetAdornmentLayer("WhereAmI");
+                Project proj = GetContainingProject(fileName);
+                if (proj != null)
+                {
+                    string projectName = proj.Name;
 
-            this.view.ViewportHeightChanged += this.OnSizeChanged;
-            this.view.ViewportWidthChanged += this.OnSizeChanged;
+                    if (_settings.ViewFilename)
+                    {
+                        _fileName.Text = fileName;
+
+                        Brush fileNameBrush = new SolidColorBrush(Color.FromArgb(_settings.FilenameColor.A, _settings.FilenameColor.R, _settings.FilenameColor.G, _settings.FilenameColor.B));
+                        _fileName.FontFamily = new FontFamily("Consolas");
+                        _fileName.FontSize = _settings.FilenameSize;
+                        _fileName.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
+                        _fileName.TextAlignment = System.Windows.TextAlignment.Right;
+                        _fileName.Foreground = fileNameBrush;
+                        _fileName.Opacity = _settings.Opacity;
+                    }
+
+                    if (_settings.ViewFolders)
+                    {
+                        _folderStructure.Text = GetFolderDiffs(textDoc.FilePath, proj.FullName);
+
+                        Brush foldersBrush = new SolidColorBrush(Color.FromArgb(_settings.FoldersColor.A, _settings.FoldersColor.R, _settings.FoldersColor.G, _settings.FoldersColor.B));
+                        _folderStructure.FontFamily = new FontFamily("Consolas");
+                        _folderStructure.FontSize = _settings.FoldersSize;
+                        _folderStructure.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
+                        _folderStructure.TextAlignment = System.Windows.TextAlignment.Right;
+                        _folderStructure.Foreground = foldersBrush;
+                        _folderStructure.Opacity = _settings.Opacity;
+                    }
+
+                    if (_settings.ViewProject)
+                    {
+                        _projectName.Text = projectName;
+
+                        Brush projectNameBrush = new SolidColorBrush(Color.FromArgb(_settings.ProjectColor.A, _settings.ProjectColor.R, _settings.ProjectColor.G, _settings.ProjectColor.B));
+                        _projectName.FontFamily = new FontFamily("Consolas");
+                        _projectName.FontSize = _settings.ProjectSize;
+                        _projectName.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
+                        _projectName.TextAlignment = System.Windows.TextAlignment.Right;
+                        _projectName.Foreground = projectNameBrush;
+                        _projectName.Opacity = _settings.Opacity;
+                    }
+                }
+            }
+
+            // Force to have an ActualWidth
+            System.Windows.Rect finalRect = new System.Windows.Rect();
+            _fileName.Arrange(finalRect);
+            _folderStructure.Arrange(finalRect);
+            _projectName.Arrange(finalRect);
+
+            //Grab a reference to the adornment layer that this adornment should be added to
+            _adornmentLayer = view.GetAdornmentLayer("WhereAmIAdornment");
+
+            _view.ViewportHeightChanged += delegate { this.onSizeChange(); };
+            _view.ViewportWidthChanged += delegate { this.onSizeChange(); };
+        }
+
+        public void onSizeChange()
+        {
+            _adornmentLayer.RemoveAllAdornments();
+            _adornmentLayer.Opacity = 1;
+
+            double lineTopPosition = 0;
+            double fromTop = 1;
+
+            switch (_settings.Position)
+            {
+                case Recoding.WhereAmI2015.AdornmentPositions.TopRight:
+                default:
+                    lineTopPosition = _view.ViewportTop + 5;
+                    break;
+
+                case Recoding.WhereAmI2015.AdornmentPositions.BottomRight:
+                    lineTopPosition = _view.ViewportBottom - 5;
+                    fromTop = -1;
+                    break;
+            }
+
+            // Place the textes in the layer
+            if (_settings.ViewFilename)
+            {
+                if (fromTop == -1 && lineTopPosition == (_view.ViewportBottom - 5))
+                    lineTopPosition += _fileName.ActualHeight * fromTop;
+
+                Canvas.SetLeft(_fileName, _view.ViewportRight - (_fileName.ActualWidth + 15));
+                Canvas.SetTop(_fileName, lineTopPosition);
+
+                _adornmentLayer.AddAdornment(AdornmentPositioningBehavior.ViewportRelative, null, null, _fileName, null);
+
+                lineTopPosition += _fileName.ActualHeight * fromTop;
+            }
+
+            if (_settings.ViewFolders && !String.IsNullOrEmpty(_folderStructure.Text))
+            {
+                if (fromTop == -1 && lineTopPosition == (_view.ViewportBottom - 5))
+                    lineTopPosition += _folderStructure.ActualHeight * fromTop;
+
+                Canvas.SetLeft(_folderStructure, _view.ViewportRight - (_folderStructure.ActualWidth + 15));
+                Canvas.SetTop(_folderStructure, lineTopPosition);
+
+                _adornmentLayer.AddAdornment(AdornmentPositioningBehavior.ViewportRelative, null, null, _folderStructure, null);
+
+                lineTopPosition += _folderStructure.ActualHeight * fromTop;
+            }
+
+            if (_settings.ViewProject)
+            {
+                if (fromTop == -1 && lineTopPosition == (_view.ViewportBottom - 5))
+                    lineTopPosition += _projectName.ActualHeight * fromTop;
+
+                Canvas.SetLeft(_projectName, _view.ViewportRight - (_projectName.ActualWidth + 15));
+                Canvas.SetTop(_projectName, lineTopPosition);
+
+                _adornmentLayer.AddAdornment(AdornmentPositioningBehavior.ViewportRelative, null, null, _projectName, null);
+            }
         }
 
         /// <summary>
-        /// Event handler for viewport height or width changed events. Adds adornment at the top right corner of the viewport.
+        /// Given a filename, retrieve the Project container
         /// </summary>
-        /// <param name="sender">Event sender</param>
-        /// <param name="e">Event arguments</param>
-        private void OnSizeChanged(object sender, EventArgs e)
+        /// <param name="fileName"></param>
+        /// <returns></returns>
+        public static Project GetContainingProject(string fileName)
         {
-            // Clear the adornment layer of previous adornments
-            this.adornmentLayer.RemoveAllAdornments();
+            if (!String.IsNullOrEmpty(fileName))
+            {
 
-            // Place the image in the top right hand corner of the Viewport
-            Canvas.SetLeft(this.image, this.view.ViewportRight - RightMargin - AdornmentWidth);
-            Canvas.SetTop(this.image, this.view.ViewportTop + TopMargin);
+                var dte2 = (EnvDTE80.DTE2)Package.GetGlobalService(typeof(SDTE));
+                if (dte2 != null)
+                {
+                    var prjItem = dte2.Solution.FindProjectItem(fileName);
+                    if (prjItem != null)
+                        return prjItem.ContainingProject;
+                }
+            }
+            return null;
+        }
 
-            // Add the image to the adornment layer and make it relative to the viewport
-            this.adornmentLayer.AddAdornment(AdornmentPositioningBehavior.ViewportRelative, null, null, this.image, null);
+        /// <summary>
+        /// Given 2 absolute paths, returns the difference in folder structure.
+        /// (The first should be nested in the second)
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="folderPath"></param>
+        /// <returns></returns>
+        private static string GetFolderDiffs(string filePath, string folderPath)
+        {
+            if (!String.IsNullOrEmpty(folderPath))
+                return System.IO.Path.GetDirectoryName(filePath).Replace(System.IO.Path.GetDirectoryName(folderPath), "").Replace("\\", "/").ToLower();
+
+            return "";
         }
     }
 }

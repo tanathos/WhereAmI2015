@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Recoding.WhereAmI2015;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -56,6 +57,16 @@ namespace WhereAmI2015
         /// The size of the text for the project
         /// </summary>
         double ProjectSize { get; set; }
+
+        /// <summary>
+        /// The position of the text block
+        /// </summary>
+        AdornmentPositions Position { get; set; }
+
+        /// <summary>
+        /// The opacity to use to render the textes
+        /// </summary>
+        double Opacity { get; set; }
 
         /// <summary>
         /// Performs the store of the instance of this interface to the user's settings
