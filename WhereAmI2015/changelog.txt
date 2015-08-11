@@ -1,6 +1,6 @@
 ﻿WhereAmI - Changelog
 --------------------
 
+1.0.0 - Ready for the first release, will include: all the previous functionalities from the VS2013 extension + opacity control and Top/Bottom alignment
 0.5.0 - Added the backbones for the settings
-
 0.0.0 - Started the project
